@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF4E4">
+  <meta name="description" content="五年级上学期期中闯关小游戏：语文、数学、英语三科随机答题，答完给出正确率、知识点掌握和学习建议。">
+  <title>期中闯关局 · 五年级上学期</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-screen="home">
+  <svg class="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <symbol id="fox-mascot" viewBox="0 0 220 220">
+      <path d="M55 80 L41 24 L92 53 Z" fill="#F49B44" stroke="#23303B" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M62 68 L52 38 L82 54 Z" fill="#FFCDA3"/>
+      <path d="M165 80 L179 24 L128 53 Z" fill="#F49B44" stroke="#23303B" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M158 68 L168 38 L138 54 Z" fill="#FFCDA3"/>
+      <path d="M110 42 C158 42 184 76 184 118 C184 162 152 190 110 190 C68 190 36 162 36 118 C36 76 62 42 110 42 Z" fill="#F9A94D" stroke="#23303B" stroke-width="6"/>
+      <path d="M110 82 C140 82 158 104 158 132 C158 158 136 174 110 174 C84 174 62 158 62 132 C62 104 80 82 110 82 Z" fill="#FFF3DC"/>
+      <ellipse cx="87" cy="112" rx="8" ry="9" fill="#23303B"/>
+      <ellipse cx="133" cy="112" rx="8" ry="9" fill="#23303B"/>
+      <circle cx="89.5" cy="108.5" r="2.8" fill="#fff"/>
+      <circle cx="135.5" cy="108.5" r="2.8" fill="#fff"/>
+      <ellipse cx="70" cy="136" rx="9" ry="5.5" fill="#FF9E9E" opacity=".7"/>
+      <ellipse cx="150" cy="136" rx="9" ry="5.5" fill="#FF9E9E" opacity=".7"/>
+      <path d="M110 124 L101 133 L119 133 Z" fill="#23303B"/>
+      <path d="M110 133 V140 M110 140 Q101 148 93 141 M110 140 Q119 148 127 141" fill="none" stroke="#23303B" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M110 16 L168 40 L110 64 L52 40 Z" fill="#5B8DEF" stroke="#23303B" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M77 50 V67 C77 77 143 77 143 67 V50" fill="#5B8DEF" stroke="#23303B" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M168 40 V67" stroke="#23303B" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="168" cy="73" r="6" fill="#FFC93C" stroke="#23303B" stroke-width="4"/>
+    </symbol>
+  </svg>
+
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <header class="topbar">
+    <a class="brand" href="#" id="brand-home" aria-label="回到期中闯关局首页">
+      <span class="brand__mark" aria-hidden="true">🎒</span>
+      <span class="brand__text">
+        <b>期中闯关局</b>
+        <small>五年级 · 上学期</small>
+      </span>
+    </a>
+    <div class="topbar__tools">
+      <span class="total-stars" aria-label="已收集星星">
+        <span class="total-stars__icon" aria-hidden="true">⭐</span>
+        <b id="total-stars">0 / 9</b>
+      </span>
+      <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="true" aria-label="关闭音效">🔊</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <!-- 首页 -->
+    <section class="screen screen--home" id="screen-home" aria-labelledby="home-title">
+      <div class="hero">
+        <div class="hero__copy">
+          <p class="eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span>五年级上学期 · 期中复习</p>
+          <h1 id="home-title">把期中知识<br><em>玩成一场闯关</em></h1>
+          <p class="hero__lead">语文、数学、英语三科小挑战。每次 10 道题，答完马上知道哪里学得牢、哪里还要加把劲。</p>
+          <div class="hero__actions">
+            <button type="button" class="btn btn--primary btn--lg" id="hero-start">
+              选一科，开始闯关
+              <span class="btn__arrow" aria-hidden="true">→</span>
+            </button>
+            <span class="hero__hint">约 5 分钟 · 不用注册 · 记录保存在本机</span>
+          </div>
+          <ul class="hero__meta" aria-label="游戏信息">
+            <li><b>3</b><span>科任选</span></li>
+            <li><b>10</b><span>题一次</span></li>
+            <li><b>9</b><span>颗星可集</span></li>
+          </ul>
+        </div>
+
+        <div class="hero__side">
+          <div class="mascot-card">
+            <p class="speech">准备好了吗？<br>答完 10 题，看看你有多厉害！</p>
+            <svg class="mascot" viewBox="0 0 220 220" role="img" aria-label="戴学士帽的小狐狸">
+              <use href="#fox-mascot"></use>
+            </svg>
+            <span class="float-badge float-badge--pencil" aria-hidden="true">✏️</span>
+            <span class="float-badge float-badge--book" aria-hidden="true">📚</span>
+            <span class="float-badge float-badge--bulb" aria-hidden="true">💡</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h2>选择你的挑战</h2>
+        <p>每科从题库随机抽取 10 道题</p>
+      </div>
+      <div class="subject-grid" id="subject-grid"></div>
+
+      <section class="how" aria-labelledby="how-title">
+        <div class="section-head">
+          <h2 id="how-title">三步就能玩</h2>
+          <p>答完还能看到学习建议</p>
+        </div>
+        <ol class="steps">
+          <li>
+            <span class="step-num" aria-hidden="true">1</span>
+            <div><b>选一科</b><p>语文、数学、英语，想练哪科点哪科。</p></div>
+          </li>
+          <li>
+            <span class="step-num" aria-hidden="true">2</span>
+            <div><b>答 10 题</b><p>随机抽题，选完立刻知道对错和原因。</p></div>
+          </li>
+          <li>
+            <span class="step-num" aria-hidden="true">3</span>
+            <div><b>看报告</b><p>正确率、知识点掌握和下一步练习建议。</p></div>
+          </li>
+        </ol>
+      </section>
+
+      <footer class="footer">
+        <p>题库范围：人教部编版语文第 1–4 单元 · 人教版数学小数乘除法与位置 · PEP 英语 Unit 1–3。</p>
+        <p class="footer__small">选项顺序每次都会打乱，适合期中前查漏补缺。成绩只保存在当前浏览器里。</p>
+      </footer>
+    </section>
+
+    <!-- 答题页 -->
+    <section class="screen screen--quiz" id="screen-quiz" aria-labelledby="q-text" hidden>
+      <div class="quiz-wrap">
+        <div class="quiz-top">
+          <button type="button" class="btn btn--ghost btn--sm" id="quit-quiz">← 退出</button>
+          <span class="quiz-subject" id="quiz-subject">语文 · 期中闯关</span>
+          <span class="quiz-score" id="quiz-score-chip">得分 <b id="quiz-score">0</b></span>
+        </div>
+        <div class="quiz-meta">
+          <span id="q-index">第 1 / 10 题</span>
+          <span class="quiz-combo" id="q-combo" hidden>🔥 连击 ×2</span>
+          <span class="quiz-time" id="q-time">00:00</span>
+        </div>
+        <div class="progress" role="progressbar" aria-label="闯关进度">
+          <span class="progress__bar" id="progress-bar"></span>
+        </div>
+
+        <article class="question-card" id="question-card">
+          <div class="question-card__head">
+            <span class="q-tag" id="q-tag">修辞手法</span>
+            <span class="keyboard-hint">按 1–4 可快速作答</span>
+          </div>
+          <h1 class="q-text" id="q-text">题目加载中…</h1>
+          <div class="options" id="options" role="group" aria-labelledby="q-text"></div>
+
+          <div class="feedback" id="feedback" hidden aria-live="polite">
+            <div class="feedback__head">
+              <span class="feedback__icon" id="feedback-icon" aria-hidden="true">✓</span>
+              <b id="feedback-title">答对啦！</b>
+            </div>
+            <p class="feedback__text" id="feedback-text"></p>
+            <button type="button" class="btn btn--primary btn--sm next-btn" id="next-btn">下一题 →</button>
+          </div>
+        </article>
+        <p class="quiz-footnote">选好答案后会自动判分，错题会在最后统一回顾。</p>
+      </div>
+    </section>
+
+    <!-- 结果页 -->
+    <section class="screen screen--result" id="screen-result" aria-labelledby="result-title" hidden>
+      <div class="result-wrap">
+        <div class="result-hero">
+          <div class="result-mascot">
+            <svg class="mascot" viewBox="0 0 220 220" aria-hidden="true">
+              <use href="#fox-mascot"></use>
+            </svg>
+            <span class="result-mascot__spark" aria-hidden="true">✨</span>
+          </div>
+          <p class="eyebrow" id="result-subject">语文 · 期中闯关</p>
+          <h1 id="result-title">太厉害了，小侦探！</h1>
+          <div class="stars" id="result-stars" aria-label="获得 3 星">
+            <span class="star is-on">★</span><span class="star is-on">★</span><span class="star is-on">★</span>
+          </div>
+          <p class="result-score"><b id="result-score">0</b><span>分</span></p>
+          <p class="result-note" id="result-note"></p>
+          <div class="result-chips" id="result-chips"></div>
+        </div>
+
+        <div class="result-grid">
+          <section class="panel">
+            <div class="panel__head">
+              <h2>知识点掌握</h2>
+              <span class="panel__hint">越靠前越需要加练</span>
+            </div>
+            <div class="knowledge-list" id="knowledge-list"></div>
+          </section>
+
+          <section class="panel panel--tips">
+            <div class="panel__head">
+              <h2>下一步这样练</h2>
+            </div>
+            <ol class="tips" id="tips"></ol>
+          </section>
+        </div>
+
+        <section class="panel panel--review">
+          <div class="panel__head">
+            <h2>错题回顾</h2>
+            <span class="panel__hint" id="wrong-count"></span>
+          </div>
+          <div class="wrong-list" id="wrong-list"></div>
+        </section>
+
+        <div class="result-actions">
+          <button type="button" class="btn btn--primary btn--lg" id="retry">再战一次 →</button>
+          <button type="button" class="btn btn--secondary btn--lg" id="back-home">换一科</button>
+        </div>
+        <p class="result-footnote">成绩保存在本机浏览器，换设备不会同步。</p>
+      </div>
+    </section>
+  </main>
+
+  <noscript>
+    <p class="noscript">这个闯关小游戏需要开启 JavaScript 才能玩，请在浏览器设置里打开后刷新页面。</p>
+  </noscript>
+
+  <script src="assets/questions.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

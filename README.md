@@ -14,4 +14,6 @@ dsh-superagent 联调仓库。
 
 打开方式：直接双击 `index.html`，或在仓库目录运行 `python3 -m http.server 8000` 后访问 `http://localhost:8000/`。
 
+题库自检：`node scripts/check-questions.mjs`。
+
 Hello from superagent

@@ -13,6 +13,7 @@
     generated: '程序生成',
     ai: 'AI 辅助',
     photo: '拍照配图',
+    taxonomy: '知识图谱',
   };
   var DB_NAME = 'quiz-admin-db';
   var DB_STORE = 'bank';
@@ -35,6 +36,8 @@
     aiPreview: [],
     importPreview: null,
     aiImage: null,
+    taxonomy: null,
+    taxonomyQuestions: [],
     settings: loadSettings(),
     toastTimer: null,
   };
@@ -210,9 +213,9 @@
     if (typeof answer === 'string' && /^\d+$/.test(answer)) answer = Number(answer);
     if (!point) return { error: '缺少知识点' };
     if (!text) return { error: '缺少题干' };
-    if (options.length !== 4 || options.some(function (item) { return !item; })) return { error: '必须有 4 个非空选项' };
-    if (new Set(options).size !== 4) return { error: '选项重复' };
-    if (!Number.isInteger(answer) || answer < 0 || answer > 3) return { error: '答案下标无效' };
+    if (options.length < 3 || options.length > 4 || options.some(function (item) { return !item; })) return { error: '必须有 3–4 个非空选项' };
+    if (new Set(options).size !== options.length) return { error: '选项重复' };
+    if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) return { error: '答案下标无效' };
     if (!explain) return { error: '缺少解析' };
     var question = {
       id: String(raw.id || '').trim() || '',
@@ -230,8 +233,15 @@
         caption: raw.figure.caption ? String(raw.figure.caption) : '',
       };
     }
-    if (raw.source === 'generated' || raw.source === 'ai' || raw.source === 'photo' || raw.source === 'manual') {
+    if (raw.source === 'generated' || raw.source === 'ai' || raw.source === 'photo' || raw.source === 'manual' || raw.source === 'taxonomy') {
       question.source = raw.source;
+    }
+    if (raw.taxonomy && raw.taxonomy.id) {
+      question.taxonomy = {
+        id: String(raw.taxonomy.id),
+        topicId: String(raw.taxonomy.topicId || ''),
+        difficulty: String(raw.taxonomy.difficulty || ''),
+      };
     }
     if (raw.createdAt) question.createdAt = String(raw.createdAt);
     if (raw.generator) question.generator = String(raw.generator);
@@ -485,6 +495,7 @@
     if (window.location.hash !== '#' + name) {
       try { window.history.replaceState(null, '', '#' + name); } catch (error) { /* 忽略 */ }
     }
+    if (name === 'taxonomy') loadTaxonomyPanel();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -567,9 +578,11 @@
     var subject = $('#form-subject').value;
     var point = $('#form-point').value.trim();
     var text = $('#form-question').value.trim();
-    var options = ['a', 'b', 'c', 'd'].map(function (letter) {
+    var rawOptions = ['a', 'b', 'c', 'd'].map(function (letter) {
       return $('#form-option-' + letter).value.trim();
     });
+    var options = rawOptions.slice(0, 3);
+    if (rawOptions[3]) options.push(rawOptions[3]);
     var answer = Number($('#form-answer').value);
     var explain = $('#form-explain').value.trim();
     var source = $('#form-source').value;
@@ -577,9 +590,9 @@
     if (!SUBJECT_MAP[subject]) errors.push('请选择科目');
     if (!point) errors.push('请填写知识点');
     if (!text) errors.push('请填写题干');
-    if (options.some(function (item) { return !item; })) errors.push('四个选项都要填写');
+    if (!rawOptions[0] || !rawOptions[1] || !rawOptions[2]) errors.push('至少填写 A、B、C 三个选项');
     if (new Set(options).size !== options.length) errors.push('选项不能重复');
-    if (!Number.isInteger(answer) || answer < 0 || answer > 3) errors.push('答案下标无效');
+    if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) errors.push('答案下标无效');
     if (!explain) errors.push('请填写解析');
     if (state.figure && state.figure.src.length > 900000) errors.push('图片太大，请换一张更小的图片');
     if (errors.length) return { errors: errors };
@@ -628,6 +641,8 @@
         state.bank[oldSubject].questions.splice(index, 1);
         question.id = editing.id;
         question.createdAt = target.createdAt || new Date().toISOString();
+        if (target.taxonomy) question.taxonomy = target.taxonomy;
+        if (target.figure && !question.figure) question.figure = target.figure;
         state.bank[subject].questions.push(question);
       } else {
         question = Object.assign({}, target, question);
@@ -1195,6 +1210,240 @@
     $('#generator-hint').textContent = found ? found.hint : '';
   }
 
+  /* ---------- 知识图谱题库 ---------- */
+
+  function taxonomyReady() {
+    return Boolean(state.taxonomy && Array.isArray(state.taxonomyQuestions));
+  }
+
+  function taxonomyBookId(subject) {
+    return state.taxonomy && state.taxonomy.subjects[subject]
+      ? state.taxonomy.subjects[subject].bookId
+      : '';
+  }
+
+  function populateTaxonomyUnits() {
+    var select = $('#tax-unit');
+    var subject = $('#tax-subject').value;
+    var bookId = taxonomyBookId(subject);
+    var previous = select.value;
+    select.innerHTML = '<option value="">全部单元</option>';
+    if (!state.taxonomy || !bookId || !state.taxonomy.books[bookId]) return;
+    Object.keys(state.taxonomy.books[bookId].units).forEach(function (unitNo) {
+      var unit = state.taxonomy.books[bookId].units[unitNo];
+      var option = document.createElement('option');
+      option.value = unitNo;
+      option.textContent = unitNo + ' · ' + unit.topicIds.length + ' 个知识点 / ' + unit.questionCount + ' 题';
+      select.appendChild(option);
+    });
+    if (previous && state.taxonomy.books[bookId].units[previous]) select.value = previous;
+  }
+
+  function loadTaxonomyPanel() {
+    if (taxonomyReady()) {
+      populateTaxonomyUnits();
+      renderTaxonomy();
+      return;
+    }
+    $('#tax-list').innerHTML = '<p class="placeholder-note">正在从 cn-math-taxonomy 读取知识点和题库…</p>';
+    $('#tax-status').textContent = '';
+    Promise.all([
+      fetch('../textbooks/assets/taxonomy.json').then(function (response) {
+        if (!response.ok) throw new Error('taxonomy.json HTTP ' + response.status);
+        return response.json();
+      }),
+      fetch('../textbooks/assets/taxonomy-questions.json').then(function (response) {
+        if (!response.ok) throw new Error('taxonomy-questions.json HTTP ' + response.status);
+        return response.json();
+      }),
+    ]).then(function (results) {
+      state.taxonomy = results[0];
+      state.taxonomyQuestions = results[1].questions || [];
+      populateTaxonomyUnits();
+      renderTaxonomy();
+    }).catch(function (error) {
+      $('#tax-list').innerHTML = '<p class="placeholder-note">知识图谱数据加载失败：' + escapeHtml(error.message) +
+        '<br>请先运行 <code>node scripts/build-taxonomy-bridge.mjs</code>。</p>';
+      $('#tax-status').textContent = '';
+    });
+  }
+
+  function taxonomyAnswerIndex(question) {
+    if (!Array.isArray(question.choices)) return -1;
+    var answer = String(question.answer || '').trim();
+    var byKey = question.choices.findIndex(function (choice) {
+      return String(choice.key || '').trim().toUpperCase() === answer.toUpperCase();
+    });
+    if (byKey !== -1) return byKey;
+    var byText = question.choices.findIndex(function (choice) {
+      return String(choice.text || '').trim() === answer;
+    });
+    if (byText !== -1) return byText;
+    var byLetter = 'ABCD'.indexOf(answer.toUpperCase());
+    return byLetter !== -1 ? byLetter : -1;
+  }
+
+  function taxonomyImported(id) {
+    return allQuestions().some(function (item) {
+      return (item.question.taxonomy && item.question.taxonomy.id === id) || item.question.id === 'tax-' + id;
+    });
+  }
+
+  function taxonomyDiagnoseHref(subject) {
+    var base = '../cn-math-taxonomy/diagnose/';
+    return subject === 'math' ? base : base + '?subject=' + encodeURIComponent(subject);
+  }
+
+  function filteredTaxonomy() {
+    var subject = $('#tax-subject').value;
+    var type = $('#tax-type').value;
+    var difficulty = $('#tax-difficulty').value;
+    var search = $('#tax-search').value.trim().toLowerCase();
+    var bookId = taxonomyBookId(subject);
+    var unitNo = $('#tax-unit').value;
+    var allowedTopics = null;
+    if (unitNo && bookId && state.taxonomy.books[bookId] && state.taxonomy.books[bookId].units[unitNo]) {
+      allowedTopics = state.taxonomy.books[bookId].units[unitNo].topicIds;
+    }
+    return state.taxonomyQuestions.filter(function (question) {
+      if (question.subject !== subject) return false;
+      if (type && question.type !== type) return false;
+      if (difficulty && question.difficulty !== difficulty) return false;
+      if (allowedTopics && allowedTopics.indexOf(question.topicId) === -1) return false;
+      if (search) {
+        var topic = state.taxonomy.topics[question.topicId];
+        var haystack = [question.prompt, question.explanation, question.topicName, topic && topic.chapter]
+          .join(' ').toLowerCase();
+        if (haystack.indexOf(search) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function importTaxonomyQuestion(question) {
+    if (question.type !== 'choice') return { error: 'numeric' };
+    if (taxonomyImported(question.id)) return { skipped: true };
+    var topic = state.taxonomy.topics[question.topicId];
+    if (!topic) return { error: 'topic' };
+    var options = (question.choices || []).map(function (choice) {
+      return String(choice.text || '').trim();
+    });
+    if (options.length < 3 || options.length > 4 || options.some(function (item) { return !item; })) {
+      return { error: 'options' };
+    }
+    if (new Set(options).size !== options.length) return { error: 'options' };
+    var answer = taxonomyAnswerIndex(question);
+    if (answer < 0 || answer >= options.length) return { error: 'answer' };
+    var prompt = String(question.prompt || '').trim();
+    var explain = String(question.explanation || '').trim();
+    if (!prompt || !explain) return { error: 'fields' };
+    state.bank[question.subject].questions.push({
+      id: 'tax-' + question.id,
+      point: topic.name,
+      q: prompt,
+      options: options,
+      answer: answer,
+      explain: explain,
+      source: 'taxonomy',
+      taxonomy: {
+        id: question.id,
+        topicId: question.topicId,
+        difficulty: question.difficulty || '',
+      },
+      createdAt: new Date().toISOString(),
+    });
+    return { added: true };
+  }
+
+  function renderTaxonomy() {
+    if (!taxonomyReady()) {
+      loadTaxonomyPanel();
+      return;
+    }
+    var list = filteredTaxonomy();
+    var choiceList = list.filter(function (question) { return question.type === 'choice'; });
+    var numericList = list.filter(function (question) { return question.type === 'numeric'; });
+    var imported = choiceList.filter(function (question) { return taxonomyImported(question.id); }).length;
+    $('#tax-count').textContent = list.length + ' 题';
+    $('#tax-status').textContent = '当前筛选：' + choiceList.length + ' 道选择题（已导入 ' + imported + '）、' +
+      numericList.length + ' 道数值题。数值题请到知识图谱诊断页练习。';
+    if (!list.length) {
+      $('#tax-list').innerHTML = '<p class="placeholder-note">没有符合筛选的题目，换个单元或题型试试。</p>';
+      return;
+    }
+    var shown = list.slice(0, 80);
+    $('#tax-list').innerHTML = shown.map(function (question) {
+      var topic = state.taxonomy.topics[question.topicId];
+      var already = question.type === 'choice' && taxonomyImported(question.id);
+      var isChoice = question.type === 'choice';
+      var options = isChoice && Array.isArray(question.choices) ? question.choices.map(function (choice) {
+        var key = String(choice.key || '').toUpperCase();
+        var correct = key === String(question.answer || '').trim().toUpperCase() ||
+          String(choice.text || '').trim() === String(question.answer || '').trim();
+        return '<span class="preview-option' + (correct ? ' is-answer' : '') + '">' +
+          escapeHtml(key ? key + '. ' : '') + escapeHtml(choice.text) + (correct ? ' ✓' : '') + '</span>';
+      }).join('') : '';
+      var action = isChoice
+        ? (already
+          ? '<span class="tax-imported">已导入</span>'
+          : '<button type="button" class="btn btn--primary btn--sm" data-tax-import="' + escapeHtml(question.id) + '">导入</button>')
+        : '<a class="btn btn--ghost btn--sm" href="' + taxonomyDiagnoseHref(question.subject) + '" target="_blank" rel="noopener noreferrer">去诊断页</a>';
+      return '<article class="tax-card" data-tax-id="' + escapeHtml(question.id) + '">' +
+        '<div class="tax-card__head">' +
+          '<span class="subject-pill subject-pill--' + question.subject + '">' + subjectLabel(question.subject) + '</span>' +
+          '<span class="q-row__point">' + escapeHtml(topic ? topic.name : question.topicName) + '</span>' +
+          '<span class="q-row__source q-row__source--taxonomy">' + (isChoice ? '选择题' : '数值题') + '</span>' +
+          '<span class="tax-card__difficulty">' + escapeHtml(question.difficulty || '') + '</span>' +
+          '<code class="q-row__id">' + escapeHtml(question.id) + '</code>' +
+        '</div>' +
+        '<p class="tax-card__q">' + escapeHtml(question.prompt) + '</p>' +
+        (isChoice
+          ? '<div class="tax-card__options">' + options + '</div>'
+          : '<p class="tax-card__numeric">参考答案：<b>' + escapeHtml(question.answer) + '</b></p>') +
+        '<p class="tax-card__explain"><b>解析：</b>' + escapeHtml(question.explanation) + '</p>' +
+        '<div class="tax-card__foot">' + action + '</div>' +
+      '</article>';
+    }).join('') + (list.length > 80 ? '<p class="placeholder-note">只显示前 80 题，请用筛选缩小范围。</p>' : '');
+  }
+
+  function importOneTaxonomy(id) {
+    var question = state.taxonomyQuestions.filter(function (item) { return item.id === id; })[0];
+    if (!question) return;
+    var result = importTaxonomyQuestion(question);
+    if (result.added) {
+      saveBank();
+      renderAll();
+      renderTaxonomy();
+      toast('已导入：' + question.topicName);
+    } else if (result.skipped) {
+      toast('这道题已经导入过了', { error: true });
+    } else {
+      toast('这道题格式不完整，暂不能导入', { error: true });
+    }
+  }
+
+  function importFilteredTaxonomy() {
+    if (!taxonomyReady()) return;
+    var choiceList = filteredTaxonomy().filter(function (question) { return question.type === 'choice'; });
+    var added = 0;
+    var skipped = 0;
+    var failed = 0;
+    choiceList.forEach(function (question) {
+      var result = importTaxonomyQuestion(question);
+      if (result.added) added += 1;
+      else if (result.skipped) skipped += 1;
+      else failed += 1;
+    });
+    if (added) {
+      saveBank();
+      renderAll();
+    }
+    renderTaxonomy();
+    toast('已导入 ' + added + ' 道题' +
+      (skipped ? '，跳过 ' + skipped + ' 道已导入' : '') +
+      (failed ? '，' + failed + ' 道格式不完整' : ''));
+  }
+
   function bindEvents() {
     $$('.admin-tab').forEach(function (tab) {
       tab.addEventListener('click', function () { switchTab(tab.dataset.tab); });
@@ -1262,6 +1511,25 @@
     $('#form-figure-clear').addEventListener('click', clearFigure);
     $('#form-figure-alt').addEventListener('input', function (event) {
       if (state.figure) state.figure.alt = event.target.value;
+    });
+
+    // 知识图谱题库
+    $('#tax-subject').addEventListener('change', function () {
+      populateTaxonomyUnits();
+      renderTaxonomy();
+    });
+    ['#tax-unit', '#tax-type', '#tax-difficulty'].forEach(function (selector) {
+      $(selector).addEventListener('change', renderTaxonomy);
+    });
+    var taxSearchTimer = null;
+    $('#tax-search').addEventListener('input', function () {
+      window.clearTimeout(taxSearchTimer);
+      taxSearchTimer = window.setTimeout(renderTaxonomy, 160);
+    });
+    $('#tax-import-all').addEventListener('click', importFilteredTaxonomy);
+    $('#tax-list').addEventListener('click', function (event) {
+      var button = event.target.closest('[data-tax-import]');
+      if (button) importOneTaxonomy(button.dataset.taxImport);
     });
 
     // 生成器

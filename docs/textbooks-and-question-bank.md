@@ -14,6 +14,7 @@
 - **教材**：新增 `textbooks/` 教材中心，内置语文（统编版）、数学（人教版）、英语（PEP）五年级上册三本教材。PDF 不复制进仓库，而是在页面中引用公开归档项目 `ChinaTextbook` 的文件地址，用 PDF.js 在线阅读；优先走 jsDelivr 加速镜像，失败回退 GitHub Raw。另提供 `scripts/fetch-textbooks.mjs`，个人可把 PDF 下载到本机 `textbooks/files/` 作为本地副本（已 gitignore）。
 - **题库后台**：新增 `admin/` 题库工作台。因为当前部署是 GitHub Pages 纯静态站点，没有服务器和数据库，后台做成**本地优先**：题库保存在浏览器 IndexedDB，支持手动录入、数学程序生成、AI 提示词/接口生成、拍照配图、JSON/JS 导入导出。导出 `questions.js` 后替换仓库文件即可发布；也可以“应用到本机闯关”立即试玩。
 - **没有做真正的服务端后台**：GitHub Pages 不能运行 Python/Node 服务，也没有登录、数据库和对象存储。若要做多人协作、审核流和云端题库，需要另选部署（如 Fly.io/Render/云服务器 + SQLite/Postgres），或引入现成的 `tiku-studio`。这次没有把静态仓库改造成需要长期维护的服务端，避免给出一个无法部署的“后台”。
+- **接入已有的 cn-math-taxonomy**：不另起一套知识内容，而是把它的三科五年级知识点、先修关系、诊断入口和题库桥接到教材中心与题库后台：阅读器按单元显示知识点和题量，书架显示三科统计，题库后台可按单元导入选择题。详见 3.6。
 
 ## 2. 教材：调研与选择
 
@@ -48,6 +49,7 @@ node scripts/fetch-textbooks.mjs
 - 渲染：PDF.js 逐页渲染到 `<canvas>`，支持上一页/下一页、页码跳转、适应页面/宽度、缩放、全屏、键盘 `←/→`、`+/-`、移动端左右滑动。
 - 目录：每本教材的单元页码来自原书目录，并按 PDF 前置页偏移 +5 校正（例如语文“第一单元”在原书第 1 页，PDF 第 6 页）。点击目录直接跳页。
 - 进度：`localStorage` 的 `textbook-progress-v1` 记录每本书上次读到第几页，书架显示“上次读到”。
+- 单元联动：阅读器侧栏按当前页所在单元显示 cn-math-taxonomy 的知识点、题量，以及“看知识图谱 / 诊断本单元”深链。
 - 镜像：`books.json` 的 `mirrors` 数组先试 jsDelivr，再回退 GitHub Raw；本地副本优先。加载失败时显示“在新标签页打开 PDF”和官方平台入口。
 - 无障碍：页码输入有 `aria-label`，图片阅读区有说明，键盘可操作；没有把文字层强加给扫描版 PDF。
 
@@ -95,7 +97,7 @@ node scripts/fetch-textbooks.mjs
 ### 3.3 四种补题方式
 
 1. **手动录入**
-   - 科目、知识点、题干、4 个选项、正确答案、解析；
+   - 科目、知识点、题干、3–4 个选项（A/B/C 必填，D 可选）、正确答案、解析；
    - 可选配图：文件选择/手机拍照，浏览器内压缩到最长边 1600px、JPEG 0.84，作为 data URL 存进题目；
    - 图片会随 `questions.js` 导出，所以控制尺寸；`alt` 文字用于读屏和加载失败。
 2. **程序生成（数学）**
@@ -114,6 +116,11 @@ node scripts/fetch-textbooks.mjs
    - 合并导入（同题号覆盖）或替换题库；
    - 导出 `questions.js` / JSON，或复制到剪贴板；
    - 导出的 `questions.js` 与现有 `scripts/check-questions.mjs` 兼容。
+5. **知识图谱题库**
+   - 从 `textbooks/assets/taxonomy-questions.json` 读取 cn-math-taxonomy 的三科五年级题目；
+   - 按科目、单元、难度、题型筛选，选择题可单题或整批导入；重复题按 `taxonomy.id` 跳过；
+   - 导入的题保留 `source: "taxonomy"` 和 `taxonomy: {id, topicId, difficulty}`，导出后仍可追溯；
+   - 数值题不在题库后台导入，页面上直接给“去诊断页”入口，因为现有闯关只支持选择题。
 
 ### 3.4 数据和发布流程
 
@@ -138,10 +145,65 @@ localStorage: quiz-bank-override-v1 → 首页闯关读取
 - 科目必须是 `chinese` / `math` / `english`；
 - 题号在题库内唯一；新题自动生成 `<科目前缀>-<来源>-<时间>`；
 - 知识点、题干、解析非空；
-- 恰好 4 个选项，非空且互不重复；
-- `answer` 是 0–3 的整数；
+- 3–4 个选项（A/B/C 必填，D 可选），非空且互不重复；
+- `answer` 是有效选项下标；
 - 可选 `figure.src` + `figure.alt`；
 - 可选 `source`（manual/generated/ai/photo）和 `createdAt`。
+
+## 3.6 与 cn-math-taxonomy 的联动
+
+### 为什么做桥接
+
+`cn-math-taxonomy/` 已经包含数学、英语、物理、语文、科学等学科的知识点、先修边、诊断和题库，但它的页面、题库和教材中心原本互不相通。如果只新增教材和后台，用户会在“教材—图谱—诊断—题库”之间来回找。桥接的目标是让教材单元直接连着已有知识内容，题库后台也能复用已有题目。
+
+### 生成的数据
+
+`node scripts/build-taxonomy-bridge.mjs` 从 `cn-math-taxonomy/data/{topics,dependencies,questions}.json` 生成两个文件：
+
+- `textbooks/assets/taxonomy.json`：90 个知识点、三科统计、教材单元 → 知识点映射、先修关系、题量。
+- `textbooks/assets/taxonomy-questions.json`：360 道相关题目（291 道选择 / 69 道数值）。其中语文 41 点/164 题、数学 22 点/88 题、英语 27 点/108 题。
+
+单元映射是显式维护的，不靠模糊匹配：
+
+- 语文按课文/习作/语文园地对应到 `cnc_*`；
+- 数学按小数乘除法、方程、多边形面积、植树问题等对应到 `cnm_*`；“位置（数对）”映射到图谱里六年级的 `cnm_p136`，标记为“跨年级”；
+- 英语按 PEP 五上 Unit 1–6 的功能与词汇对应到 `cne_*`。
+
+### 页面联动
+
+- **书架**：底部“三科知识图谱”卡片显示知识点数、题量、选择/数值题数，链接到 `cn-math-taxonomy/explore/?subject=<subject>&grade=5`、`diagnose/?subject=<subject>&grade=五上` 和后台的 `#taxonomy`。
+- **阅读器**：侧栏“本单元知识图谱”随当前页所在单元更新，列出前几个知识点（题量、跨年级标记），并提供：
+  - `cn-math-taxonomy/explore/?subject=<subject>&grade=5#<topicId>`
+  - `cn-math-taxonomy/diagnose/?subject=<subject>&target=<本单元知识点 id, ...>`
+- **题库后台**：新增“知识图谱题库”标签，筛选后导入选择题；数值题给“去诊断页”入口。
+
+### 选项数量
+
+cn-math-taxonomy 的选择题大多是 4 选项，也有少量 3 选项。为不改写题目内容，闯关和后台现在支持 **3–4 个选项**：
+
+- 校验脚本允许 3–4 个非空且不重复选项；
+- 后台表单 A/B/C 必填，D 可选；
+- 3 选项题在闯关里只显示 A–C，键盘 1–4 仍可用（4 不会触发不存在的选项）。
+
+### 数值题
+
+现有闯关是四选一，没有填空/数值判题 UI，因此数值题不导入题库；它们在知识图谱诊断页里可以正常作答。题库后台的筛选结果会显示数值题数量，并提示去诊断页练习，避免静默丢掉这部分内容。
+
+### 重新生成与校验
+
+```bash
+node scripts/build-taxonomy-bridge.mjs
+node scripts/check-textbooks.mjs
+```
+
+`check-textbooks.mjs` 会检查桥接文件是否存在、单元映射是否覆盖、题目数与统计是否一致，以及选择题是否 3–4 个选项。上游 `cn-math-taxonomy` 的数据更新后，重新生成即可；如果单元映射变了，需要同步修改生成脚本里的 `UNIT_TOPICS`。
+
+### 归属与局限
+
+- 知识点、先修关系和题库来自 cn-math-taxonomy（CC BY-NC 4.0），仅限个人学习、教学和研究使用；商业使用需另行授权。
+- 单元映射按当前教材版本和知识点名称显式维护，教材换版或图谱改点后需要重新核对；映射是“相关知识点”，不等于官方教材编排。
+- cn-math-taxonomy 自己声明：知识点拆分、先修关系、高中题和英语题等仍需一线教师审核；桥接不会改变这个局限。
+- 三科以外的科学、道德与法治等知识点没有映射到三本教材，只保留在 cn-math-taxonomy 原站。
 
 ## 4. 当前限制
 
@@ -152,6 +214,7 @@ localStorage: quiz-bank-override-v1 → 首页闯关读取
 - **AI 生成必须人工校对**：模型可能出错，选项可能重复或答案错误；页面会做结构校验，但不能保证学科正确性。
 - **拍照只做原图配图**：没有内置 OCR；识图依赖可选的视觉模型。照片可能含隐私信息，上传前要遮挡。
 - **题库格式是项目自有 JSON**：没有实现 QTI/Moodle 导出；如果以后要和学校平台互通，可以加 QTI 适配层。
+- **知识图谱桥接是显式映射**：教材换版、图谱增删知识点或单元顺序变化时，需要更新 `scripts/build-taxonomy-bridge.mjs` 的 `UNIT_TOPICS` 并重新生成；数值题仍未进入闯关。
 - **版权**：教材、题目图片和 AI 生成内容的使用范围由使用者负责；教材仅限个人学习，不要商业使用或二次分发。
 
 ## 5. 复现与自检
@@ -166,6 +229,7 @@ node scripts/check-questions.mjs
 # 教材目录自检
 node scripts/check-textbooks.mjs
 node scripts/check-textbooks.mjs --remote   # 额外 HEAD 远程 PDF
+node scripts/build-taxonomy-bridge.mjs      # 重新生成知识图谱桥接数据
 
 # 程序出题器自检（4 种题型 × 500 道）
 node scripts/check-generators.mjs
@@ -181,4 +245,5 @@ node scripts/fetch-textbooks.mjs
 - PDF.js：Apache-2.0，见 `textbooks/vendor/pdfjs/LICENSE`。
 - 教材 PDF：版权归原出版方；本项目不复制文件，只引用公开归档地址。`ChinaTextbook` 未声明许可证，链接不等于授权再分发，请自行判断使用范围。
 - 参考项目的许可证见上表；本项目没有复制 `tiku-studio`、`xzs`、`PaperCutter-VL`、`scan-to-practice`、`shiyi-math-practice`、`zx-study` 的代码或题库。
+- 知识图谱桥接数据由 cn-math-taxonomy 派生，沿用 CC BY-NC 4.0；生成文件保留来源和许可说明。
 - 本项目原有题库和页面代码沿用仓库现状。

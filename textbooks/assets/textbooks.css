@@ -517,6 +517,89 @@
   border-radius: 4px;
 }
 
+/* ---------- 书架 · 知识图谱联动 ---------- */
+
+.taxonomy-bridge {
+  margin-top: clamp(36px, 6vw, 60px);
+}
+
+.taxonomy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.tax-subject-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 4px 4px 0 rgba(35, 48, 59, 0.1);
+}
+
+.tax-subject-card__mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #fff;
+  border-radius: 10px;
+}
+
+.tax-subject-card--chinese .tax-subject-card__mark { background: #d64f3e; }
+.tax-subject-card--math .tax-subject-card__mark { background: #3c6cd1; }
+.tax-subject-card--english .tax-subject-card__mark { background: #1f9562; }
+
+.tax-subject-card__copy p {
+  margin: 0 0 2px;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.tax-subject-card__copy h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+.tax-subject-card__copy span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.tax-subject-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.tax-subject-card__actions .btn {
+  min-height: 30px;
+  padding: 3px 9px;
+  font-size: 0.68rem;
+}
+
+.taxonomy-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  background: rgba(255, 253, 247, 0.7);
+  border: 1.5px dashed rgba(35, 48, 59, 0.24);
+  border-radius: 10px;
+}
+
 /* ---------- 阅读器 ---------- */
 
 .reader-page {
@@ -781,6 +864,119 @@ body.reader-page::after {
   color: var(--ink-soft);
 }
 
+.unit-graph {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1.5px dashed rgba(35, 48, 59, 0.24);
+}
+
+.unit-graph__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.unit-graph__head p {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+.unit-graph__head span {
+  font-size: 0.62rem;
+  color: var(--ink-soft);
+}
+
+.unit-graph__topics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.unit-graph__topic {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 7px;
+  color: var(--ink);
+  text-decoration: none;
+  background: rgba(35, 48, 59, 0.035);
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+}
+
+.unit-graph__topic:hover {
+  background: var(--accent-soft);
+  border-color: rgba(35, 48, 59, 0.24);
+}
+
+.unit-graph__topic-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.unit-graph__topic-copy b {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.unit-graph__topic-copy small {
+  margin-top: 1px;
+  overflow: hidden;
+  font-size: 0.6rem;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.unit-graph__count {
+  flex: none;
+  font-size: 0.6rem;
+  color: var(--ink-soft);
+}
+
+.unit-graph__badge {
+  flex: none;
+  padding: 1px 5px;
+  font-size: 0.54rem;
+  font-weight: 900;
+  color: #8a5b00;
+  background: #fff0bf;
+  border-radius: 999px;
+}
+
+.unit-graph__note {
+  margin: 7px 2px 0;
+  font-size: 0.62rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.unit-graph__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 7px;
+}
+
+.unit-graph__actions a {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.unit-graph__actions a:hover {
+  text-decoration: underline;
+}
+
 .reader-side__foot {
   display: flex;
   flex-wrap: wrap;
@@ -1009,7 +1205,8 @@ body.reader-page::after {
 }
 
 @media (max-width: 1020px) {
-  .book-grid {
+  .book-grid,
+  .taxonomy-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1060,7 +1257,8 @@ body.reader-page::after {
 
 @media (max-width: 720px) {
   .book-grid,
-  .read-steps {
+  .read-steps,
+  .taxonomy-grid {
     grid-template-columns: 1fr;
   }
 

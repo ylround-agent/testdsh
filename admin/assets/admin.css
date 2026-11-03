@@ -410,6 +410,7 @@
 .q-row__source--generated { background: #e8efff; color: #2c56a8; }
 .q-row__source--ai { background: #f3e8ff; color: #6b2fa8; }
 .q-row__source--photo { background: #e4f8ee; color: #1c7a50; }
+.q-row__source--taxonomy { background: #fdf0d5; color: #8a5b00; }
 
 .q-row__figure {
   font-size: 0.6rem;
@@ -937,6 +938,119 @@
   font-weight: 900;
 }
 
+/* ---------- 知识图谱题库 ---------- */
+
+.tax-source-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 9px 12px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #6b4a00;
+  background: #fff8dc;
+  border: 2px solid #e3c96e;
+  border-radius: 10px;
+}
+
+.tax-source-note a {
+  font-weight: 800;
+  color: #8a5b00;
+}
+
+.tax-toolbar {
+  margin-bottom: 8px;
+}
+
+.tax-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tax-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.tax-card {
+  padding: 11px 12px;
+  background: #fff;
+  border: 2px solid rgba(35, 48, 59, 0.18);
+  border-radius: 12px;
+}
+
+.tax-card:hover {
+  border-color: rgba(35, 48, 59, 0.42);
+}
+
+.tax-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.tax-card__difficulty {
+  padding: 1px 6px;
+  font-size: 0.6rem;
+  color: var(--ink-soft);
+  background: rgba(35, 48, 59, 0.05);
+  border-radius: 5px;
+}
+
+.tax-card__q {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.tax-card__options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.tax-card__numeric {
+  margin: 0 0 6px;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+}
+
+.tax-card__numeric b {
+  color: var(--ink);
+}
+
+.tax-card__explain {
+  margin: 0 0 7px;
+  font-size: 0.7rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.tax-card__foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tax-imported {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #1c7a50;
+}
+
 /* ---------- 设置 ---------- */
 
 .settings-card {
@@ -1103,5 +1217,9 @@
 
   .q-row__options {
     display: none;
+  }
+
+  .tax-card__options {
+    grid-template-columns: 1fr;
   }
 }

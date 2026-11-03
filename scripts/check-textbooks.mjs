@@ -81,6 +81,67 @@ for (const book of books) {
   });
 }
 
+// 知识图谱桥接数据（由 scripts/build-taxonomy-bridge.mjs 生成）
+const bridgePath = path.join(ROOT, 'textbooks', 'assets', 'taxonomy.json');
+const taxQuestionsPath = path.join(ROOT, 'textbooks', 'assets', 'taxonomy-questions.json');
+if (!existsSync(bridgePath) || !existsSync(taxQuestionsPath)) {
+  errors.push('缺少 textbooks/assets/taxonomy.json 或 taxonomy-questions.json，请运行 node scripts/build-taxonomy-bridge.mjs');
+} else {
+  try {
+    const bridge = JSON.parse(readFileSync(bridgePath, 'utf8'));
+    const taxQuestions = JSON.parse(readFileSync(taxQuestionsPath, 'utf8')).questions || [];
+    const bridgeBooks = bridge.books || {};
+    const bridgeTopics = bridge.topics || {};
+    for (const book of books) {
+      const mapped = bridgeBooks[book.id];
+      if (!mapped) {
+        errors.push(`知识图谱桥接缺少教材 ${book.id}`);
+        continue;
+      }
+      for (const unit of book.units) {
+        const mappedUnit = mapped.units && mapped.units[unit.no];
+        if (!mappedUnit) errors.push(`知识图谱桥接缺少 ${book.id} ${unit.no}`);
+        else if (!Array.isArray(mappedUnit.topicIds) || !mappedUnit.topicIds.length) {
+          errors.push(`知识图谱桥接 ${book.id} ${unit.no} 没有知识点`);
+        } else {
+          for (const topicId of mappedUnit.topicIds) {
+            const topic = bridgeTopics[topicId];
+            if (!topic) errors.push(`知识图谱桥接 ${book.id} ${unit.no} 引用了不存在的知识点 ${topicId}`);
+            else if (topic.subject !== book.subject) {
+              errors.push(`知识图谱桥接 ${book.id} ${unit.no} 的 ${topicId} 科目为 ${topic.subject}，与教材不符`);
+            }
+          }
+        }
+      }
+    }
+    for (const [id, topic] of Object.entries(bridgeTopics)) {
+      if (!topic.name) errors.push(`知识图谱知识点 ${id} 缺少名称`);
+      if (!['chinese', 'math', 'english'].includes(topic.subject)) {
+        errors.push(`知识图谱知识点 ${id} 的科目无效：${topic.subject}`);
+      }
+    }
+    const counts = bridge.counts || {};
+    if (taxQuestions.length !== counts.questions) {
+      errors.push(`知识图谱题目数不一致：${taxQuestions.length} != ${counts.questions}`);
+    }
+    const choiceCount = taxQuestions.filter((question) => question.type === 'choice').length;
+    const numericCount = taxQuestions.filter((question) => question.type === 'numeric').length;
+    if (choiceCount !== counts.choice) errors.push(`选择题数不一致：${choiceCount} != ${counts.choice}`);
+    if (numericCount !== counts.numeric) errors.push(`数值题数不一致：${numericCount} != ${counts.numeric}`);
+    for (const question of taxQuestions) {
+      if (!bridgeTopics[question.topicId]) {
+        errors.push(`知识图谱题目 ${question.id} 引用了不存在的知识点 ${question.topicId}`);
+      }
+      if (question.type === 'choice' && (!Array.isArray(question.choices) || question.choices.length < 3 || question.choices.length > 4)) {
+        errors.push(`知识图谱选择题 ${question.id} 必须有 3–4 个选项`);
+      }
+    }
+    console.log(`知识图谱桥接通过：${counts.topics} 个知识点，${counts.questions} 道题（选择 ${counts.choice} / 数值 ${counts.numeric}）。`);
+  } catch (error) {
+    errors.push(`知识图谱桥接解析失败：${error.message}`);
+  }
+}
+
 if (remote) {
   console.log('检查远程 PDF 链接（--remote）…');
   for (const book of books) {

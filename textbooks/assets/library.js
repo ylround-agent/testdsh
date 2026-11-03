@@ -10,6 +10,9 @@
   var sourceText = document.getElementById('source-text');
   var sourceLink = document.getElementById('source-link');
   var officialLink = document.getElementById('official-link');
+  var taxonomySection = document.getElementById('taxonomy-bridge');
+  var taxonomyGrid = document.getElementById('taxonomy-grid');
+  var taxonomyNote = document.getElementById('taxonomy-note');
 
   function escapeHtml(value) {
     return String(value)
@@ -97,6 +100,36 @@
     resumeLink.href = 'reader.html?book=' + encodeURIComponent(latest.book.id) + '#p=' + latest.page;
   }
 
+  function renderTaxonomy(data) {
+    if (!taxonomySection || !taxonomyGrid || !data || !data.subjects) return;
+    var subjects = [
+      { key: 'chinese', label: '语文', mark: '语' },
+      { key: 'math', label: '数学', mark: '数' },
+      { key: 'english', label: '英语', mark: '英' },
+    ];
+    taxonomyGrid.innerHTML = subjects.map(function (subject) {
+      var totals = data.subjects[subject.key];
+      if (!totals) return '';
+      return '<article class="tax-subject-card tax-subject-card--' + subject.key + '">' +
+        '<span class="tax-subject-card__mark" aria-hidden="true">' + subject.mark + '</span>' +
+        '<div class="tax-subject-card__copy">' +
+          '<p>' + subject.label + ' · 五年级</p>' +
+          '<h3>' + totals.topicCount + ' 个知识点</h3>' +
+          '<span>' + totals.questionCount + ' 道题 · ' + totals.choiceCount + ' 选择 / ' + totals.numericCount + ' 数值</span>' +
+        '</div>' +
+        '<div class="tax-subject-card__actions">' +
+          '<a class="btn btn--ghost btn--sm" href="../cn-math-taxonomy/explore/?subject=' + subject.key + '&grade=5" target="_blank" rel="noopener noreferrer">看图谱</a>' +
+          '<a class="btn btn--ghost btn--sm" href="../cn-math-taxonomy/diagnose/?subject=' + subject.key + '&grade=%E4%BA%94%E4%B8%8A" target="_blank" rel="noopener noreferrer">做诊断</a>' +
+          '<a class="btn btn--primary btn--sm" href="../admin/#taxonomy">导入题目</a>' +
+        '</div>' +
+      '</article>';
+    }).join('');
+    if (taxonomyNote && data.source && data.source.note) {
+      taxonomyNote.textContent = data.source.note + ' 阅读器里会按单元显示对应知识点，题库后台可以按单元导入选择题。';
+    }
+    taxonomySection.hidden = false;
+  }
+
   function showError(message) {
     if (loading) loading.remove();
     grid.innerHTML = '<div class="load-error"><b>教材目录加载失败</b><p>' + escapeHtml(message) +
@@ -122,5 +155,16 @@
     })
     .catch(function (error) {
       showError(error && error.message ? error.message : '未知错误');
+    });
+
+  fetch('assets/taxonomy.json', { cache: 'no-cache' })
+    .then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    })
+    .then(renderTaxonomy)
+    .catch(function () {
+      /* 知识图谱是可选的：加载失败不影响教材书架 */
+      if (taxonomySection) taxonomySection.hidden = true;
     });
 })();

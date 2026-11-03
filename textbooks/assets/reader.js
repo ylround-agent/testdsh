@@ -12,6 +12,12 @@
     pdfLink: document.getElementById('pdf-link'),
     toc: document.getElementById('toc'),
     tocHint: document.getElementById('toc-hint'),
+    unitGraph: document.getElementById('unit-graph'),
+    unitGraphTopics: document.getElementById('unit-graph-topics'),
+    unitGraphCount: document.getElementById('unit-graph-count'),
+    unitGraphNote: document.getElementById('unit-graph-note'),
+    unitExplore: document.getElementById('unit-explore'),
+    unitDiagnose: document.getElementById('unit-diagnose'),
     side: document.getElementById('reader-side'),
     sideClose: document.getElementById('side-close'),
     sideSource: document.getElementById('side-source'),
@@ -49,6 +55,7 @@
     renderTask: null,
     renderToken: 0,
     tocItems: [],
+    taxonomy: null,
     local: false,
     mirror: false,
     loading: true,
@@ -142,6 +149,7 @@
     var changed = next !== state.page;
     state.page = next;
     updateControls();
+    updateUnitGraph();
     if (window.location.hash !== '#p=' + next) {
       try {
         window.history.replaceState(null, '', '#p=' + next);
@@ -262,6 +270,64 @@
     return book.pdf;
   }
 
+  function activeUnitNo() {
+    if (!state.book) return '';
+    var units = state.book.units.slice().sort(function (a, b) {
+      return (a.page || Number.MAX_SAFE_INTEGER) - (b.page || Number.MAX_SAFE_INTEGER);
+    });
+    var active = units[0];
+    units.forEach(function (unit) {
+      if (unit.page && unit.page <= state.page) active = unit;
+    });
+    return active ? active.no : '';
+  }
+
+  function updateUnitGraph() {
+    if (!els.unitGraph) return;
+    if (!state.taxonomy || !state.book) {
+      els.unitGraph.hidden = true;
+      return;
+    }
+    var bookMap = state.taxonomy.books && state.taxonomy.books[state.book.id];
+    var unitNo = activeUnitNo();
+    var unit = bookMap && bookMap.units && bookMap.units[unitNo];
+    if (!unit || !unit.topicIds || !unit.topicIds.length) {
+      els.unitGraph.hidden = true;
+      return;
+    }
+    var subject = state.book.subject;
+    var topics = unit.topicIds.map(function (id) {
+      return state.taxonomy.topics[id];
+    }).filter(Boolean);
+    if (!topics.length) {
+      els.unitGraph.hidden = true;
+      return;
+    }
+    var shown = topics.slice(0, 6);
+    els.unitGraph.hidden = false;
+    els.unitGraphCount.textContent = topics.length + ' 个知识点 · ' + unit.questionCount + ' 题';
+    els.unitGraphTopics.innerHTML = shown.map(function (topic) {
+      var href = '../cn-math-taxonomy/explore/?subject=' + encodeURIComponent(subject) +
+        '&grade=5#' + encodeURIComponent(topic.id);
+      return '<a class="unit-graph__topic" href="' + href + '" target="_blank" rel="noopener noreferrer">' +
+        '<span class="unit-graph__topic-copy"><b>' + escapeHtml(topic.name) + '</b>' +
+        '<small>' + escapeHtml(topic.domain || '') + ' · ' + (topic.crossGrade ? '跨年级延伸' : '五年级') + '</small></span>' +
+        (topic.crossGrade ? '<span class="unit-graph__badge">跨年级</span>' : '') +
+        '<span class="unit-graph__count">' + topic.questionCount + ' 题</span>' +
+      '</a>';
+    }).join('');
+    els.unitGraphNote.textContent = topics.length > shown.length
+      ? '还有 ' + (topics.length - shown.length) + ' 个知识点，点「看知识图谱」查看全部。'
+      : '知识点、先修关系和题库来自 cn-math-taxonomy；数值题在诊断页练习。';
+    var first = topics[0];
+    els.unitExplore.href = '../cn-math-taxonomy/explore/?subject=' + encodeURIComponent(subject) +
+      '&grade=5#' + encodeURIComponent(first.id);
+    var params = new URLSearchParams();
+    if (subject !== 'math') params.set('subject', subject);
+    params.set('target', unit.topicIds.join(','));
+    els.unitDiagnose.href = '../cn-math-taxonomy/diagnose/?' + params.toString();
+  }
+
   function buildTocFromManifest(book) {
     state.tocItems = book.units.filter(function (unit) { return unit.page; }).map(function (unit) {
       return { title: unit.no + ' ' + unit.title, page: unit.page };
@@ -370,6 +436,10 @@
       showError('PDF 阅读组件没有加载成功，请刷新页面重试。');
       return;
     }
+    var taxonomyPromise = fetch('assets/taxonomy.json', { cache: 'no-cache' })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .catch(function () { return null; });
+
     try {
       var response = await fetch('assets/books.json', { cache: 'no-cache' });
       if (!response.ok) throw new Error('HTTP ' + response.status);
@@ -392,6 +462,8 @@
     els.sideSource.href = book.sourcePage || book.pdf;
     if (book.official) els.sideOfficial.href = book.official;
     buildTocFromManifest(book);
+    state.taxonomy = await taxonomyPromise;
+    updateUnitGraph();
 
     var pdfUrl = await resolvePdfUrl(book);
     els.localNote.textContent = state.local ? '正在读取本地副本' : (state.mirror ? '已使用加速镜像' : '');
@@ -426,6 +498,7 @@
       state.total = state.pdf.numPages;
       state.page = clamp(initialPage(), 1, state.total);
       updateControls();
+      updateUnitGraph();
 
       var outlineItems = await readOutline(state.pdf);
       if (!buildTocFromOutline(outlineItems)) buildTocFromManifest(book);

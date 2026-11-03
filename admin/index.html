@@ -48,12 +48,13 @@
 
     <div class="admin-layout">
       <nav class="admin-tabs" role="tablist" aria-label="题库后台功能">
-        <button type="button" class="admin-tab is-active" role="tab" aria-selected="true" aria-controls="panel-list" data-tab="list"><span aria-hidden="true">☰</span> 题库列表</button>
-        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-form" data-tab="form"><span aria-hidden="true">✎</span> 新增 / 编辑</button>
-        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-generate" data-tab="generate"><span aria-hidden="true">⚙</span> 程序生成</button>
-        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-ai" data-tab="ai"><span aria-hidden="true">✦</span> AI 辅助</button>
-        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-io" data-tab="io"><span aria-hidden="true">⇅</span> 导入导出</button>
-        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-settings" data-tab="settings"><span aria-hidden="true">⚒</span> 设置</button>
+        <button type="button" class="admin-tab is-active" role="tab" aria-selected="true" aria-controls="panel-list" id="tab-list" data-tab="list"><span aria-hidden="true">☰</span> 题库列表</button>
+        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-form" id="tab-form" data-tab="form"><span aria-hidden="true">✎</span> 新增 / 编辑</button>
+        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-generate" id="tab-generate" data-tab="generate"><span aria-hidden="true">⚙</span> 程序生成</button>
+        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-ai" id="tab-ai" data-tab="ai"><span aria-hidden="true">✦</span> AI 辅助</button>
+        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-taxonomy" id="tab-taxonomy" data-tab="taxonomy"><span aria-hidden="true">🧭</span> 知识图谱题库</button>
+        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-io" id="tab-io" data-tab="io"><span aria-hidden="true">⇅</span> 导入导出</button>
+        <button type="button" class="admin-tab" role="tab" aria-selected="false" aria-controls="panel-settings" id="tab-settings" data-tab="settings"><span aria-hidden="true">⚒</span> 设置</button>
       </nav>
 
       <div class="admin-content">
@@ -84,6 +85,7 @@
                 <option value="generated">程序生成</option>
                 <option value="ai">AI 辅助</option>
                 <option value="photo">拍照配图</option>
+                <option value="taxonomy">知识图谱</option>
               </select>
             </label>
             <label class="field field--search">
@@ -108,7 +110,7 @@
           <div class="panel-head">
             <div>
               <h2 id="form-title">新增题目</h2>
-              <p>选择题固定 4 个选项；图片会随题库导出，建议先压缩。</p>
+              <p>选择题 3–4 个选项（A/B/C 必填，D 可选）；图片会随题库导出，建议先压缩。</p>
             </div>
             <span class="panel-count" id="form-mode">新题</span>
           </div>
@@ -135,6 +137,7 @@
                   <option value="generated">程序生成</option>
                   <option value="ai">AI 辅助</option>
                   <option value="photo">拍照配图</option>
+                  <option value="taxonomy">知识图谱</option>
                 </select>
               </label>
               <label class="field">
@@ -149,11 +152,11 @@
             </label>
 
             <div class="options-editor">
-              <p class="field-label">选项 <em>*</em> <small>答案在右侧选择</small></p>
+              <p class="field-label">选项 <em>*</em> <small>至少 3 个，D 可留空；答案在右侧选择</small></p>
               <div class="option-row"><span class="option-letter">A</span><input type="text" id="form-option-a" maxlength="120" placeholder="选项 A" required></div>
               <div class="option-row"><span class="option-letter">B</span><input type="text" id="form-option-b" maxlength="120" placeholder="选项 B" required></div>
               <div class="option-row"><span class="option-letter">C</span><input type="text" id="form-option-c" maxlength="120" placeholder="选项 C" required></div>
-              <div class="option-row"><span class="option-letter">D</span><input type="text" id="form-option-d" maxlength="120" placeholder="选项 D" required></div>
+              <div class="option-row"><span class="option-letter">D</span><input type="text" id="form-option-d" maxlength="120" placeholder="选项 D（可选）"></div>
               <label class="field field--answer">
                 <span>正确答案</span>
                 <select id="form-answer">
@@ -294,6 +297,64 @@
                 <button type="button" class="btn btn--primary" id="ai-add-all">全部加入题库</button>
               </div>
             </section>
+          </div>
+        </section>
+
+        <!-- 知识图谱题库 -->
+        <section class="admin-panel" id="panel-taxonomy" role="tabpanel" aria-labelledby="tab-taxonomy" hidden>
+          <div class="panel-head">
+            <div>
+              <h2>知识图谱题库</h2>
+              <p>从 cn-math-taxonomy 导入三科五年级的选择题；数值题请到图谱诊断页练习。</p>
+            </div>
+            <span class="panel-count" id="tax-count">—</span>
+          </div>
+          <div class="tax-source-note">
+            <span>90 个知识点 · 360 道题（291 道选择 / 69 道数值），按单元筛选后导入。</span>
+            <a href="../cn-math-taxonomy/explore/?subject=chinese&grade=5" target="_blank" rel="noopener noreferrer">打开知识图谱 ↗</a>
+          </div>
+          <div class="list-toolbar tax-toolbar">
+            <label class="field field--inline">
+              <span>科目</span>
+              <select id="tax-subject">
+                <option value="chinese">语文</option>
+                <option value="math">数学</option>
+                <option value="english">英语</option>
+              </select>
+            </label>
+            <label class="field field--inline">
+              <span>单元</span>
+              <select id="tax-unit"><option value="">全部单元</option></select>
+            </label>
+            <label class="field field--inline">
+              <span>题型</span>
+              <select id="tax-type">
+                <option value="choice">选择题（可导入）</option>
+                <option value="numeric">数值题（诊断页练习）</option>
+                <option value="">全部</option>
+              </select>
+            </label>
+            <label class="field field--inline">
+              <span>难度</span>
+              <select id="tax-difficulty">
+                <option value="">全部</option>
+                <option value="basic">基础</option>
+                <option value="standard">标准</option>
+                <option value="challenge">挑战</option>
+                <option value="advanced">进阶</option>
+              </select>
+            </label>
+            <label class="field field--search">
+              <span class="visually-hidden">搜索知识图谱题目</span>
+              <input type="search" id="tax-search" placeholder="搜索题干、知识点…" autocomplete="off">
+            </label>
+          </div>
+          <div class="tax-actions">
+            <button type="button" class="btn btn--primary btn--sm" id="tax-import-all">导入当前筛选的选择题</button>
+            <span class="ai-status" id="tax-status"></span>
+          </div>
+          <div class="tax-list" id="tax-list" aria-live="polite">
+            <p class="placeholder-note">正在读取知识图谱数据…</p>
           </div>
         </section>
 

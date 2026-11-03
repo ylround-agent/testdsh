@@ -18,6 +18,6 @@ dsh-superagent 联调仓库。
 
 题库自检：`node scripts/check-questions.mjs`。
 
-参考调研：GitHub 中小学辅助学习系统的对比与借鉴记录见 [docs/k12-github-reference.md](docs/k12-github-reference.md)。
+参考调研：GitHub 中小学辅助学习系统的对比与借鉴记录见 [docs/k12-github-reference.md](docs/k12-github-reference.md)；图形题与老师作业导入的方案见 [docs/homework-import-and-figures.md](docs/homework-import-and-figures.md)。
 
 Hello from superagent
